@@ -1,0 +1,384 @@
+{
+    "$schema":"https://json-schema.org/draft-07/schema",
+    "$id": "https://spp2086.de/v1.0/base-schema",
+    "title": "SPP2086 Data Format",
+    "description": "Draft from MTS for the open data format used in the SPP 2086",
+
+    "type": "object",
+    "properties": {
+        "header": {
+            "$ref": "#/$defs/header"
+        },
+        "data": {
+            "$ref": "#/$defs/data"
+        }
+    },
+    "required": ["header", "data"],
+
+
+    "$defs": {
+        "header": {
+            "description": "meta data about the content",
+            "type": "object",
+            "properties": {
+                "projectName": {
+                    "type": "string",
+                    "examples": ["Gezielte Oberflächenkonditionierung von 100Cr6 beim kryogenen Hartdrehen durch modellbasierte Prozessvorsteuerung und Prozessregelung"]
+                },
+                "id": {
+                    "type": "string",
+                    "description": "An ideally unique identifier for this dataset"
+                },
+                "location": {
+                    "type": "string",
+                    "examples": ["TU Kaiserslautern", "KIT"]
+                },
+                "creationDate": {
+                    "type": "string",
+                    "format": "date",
+                    "description": "Date at which this file was created",
+                    "examples": ["2018-11-13"]
+                },
+                "contact": {
+                    "type": "string",
+                    "format": "email"
+                },
+                "machine": {
+                    "$ref": "#/$defs/machine"
+                },
+                "process": {
+                    "$ref": "#/$defs/process"
+                }
+            },
+            "required": ["projectName", "location", "creationDate", "process", "machine"]
+        },
+
+        "process": {
+            "type": "object",
+            "description": "information about the process and its parametrization",
+            "properties": {
+                "processType": {
+                    "type": "string",
+                    "enum": ["Aussenlaengsdrehen","test_process"]
+                },
+                "processStartDateTime": {
+                    "type": "string",
+                    "format": "datetime",
+                    "examples": ["2021-11-12T20:20:39+00:00"]
+                },
+                "processEndDateTime": {
+                    "type": "string",
+                    "format": "datetime",
+                    "examples": ["2021-11-12T20:21:18+00:00"]
+                },
+                "tool": {
+                    "$ref": "#/$defs/tool"
+                },
+                "workpiece": {
+                    "$ref": "#/$defs/workpiece"
+                },
+                "parameters": {
+                    "type": "array",
+                    "description": "Parameters that are possibly relevant to model the process dynamics",
+                    "items": {
+                        "$ref": "#/$defs/parameter"
+                    }
+                }
+            },
+            "required": ["processType", "tool", "workpiece", "parameters"],
+            "allOf": [
+                {
+                    "if": {
+                        "properties": {"processType": {"const": "test_process"} }
+                        },
+                    "then": {
+                        "properties": {"parameters": {"type": "array",
+                            "allOf": [
+                                {
+                                    "contains": {"type": "object", "properties": {
+                                    "name": {"const": "arg"},
+                                    "unit": {"const": "mm"}}}
+                                },
+                                {
+                                    "contains": {"type": "object", "properties": {
+                                    "name": {"const": "arg2"},
+                                    "unit": {"const": "mm"}}}
+                                }
+                            ]
+                        }}
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {"processType": {"const": "Aussenlaengsdrehen"} }
+                    },
+                    "then": {
+                        "allOf": [
+                            {"properties": {"tool": {"type": "object",
+                                "properties": {
+                                    "ISO": {"type":"string"},
+                                    "wearPreProcess": {"oneOf": [
+                                        {"type": "number"},
+                                        {"type": "string"}
+                                    ]},
+                                    "wearPostProcess": {"oneOf": [
+                                        {"type": "number"},
+                                        {"type": "string"}
+                                    ]}
+                                    },
+                                "required":["ISO","wearPreProcess","wearPostProcess"]
+                            }}},
+                            {"properties": {"workpiece": {"type": "object",
+                                "properties": {
+                                    "diameterPreProcess": {"type":"number"},
+                                    "axialTurningLength": {"type":"number"}
+                                },
+                                "required":["diameterPreProcess","axialTurningLength"]
+                            }}},
+                            {"properties": {"parameters": {"type": "array",
+                                "allOf": [
+                                    {
+                                        "contains": {"type": "object", "properties": {
+                                        "symbol": {"const": "vc"},
+                                        "unit": {"const": "m/min"}}}
+                                    },
+                                    {
+                                        "contains": {"type": "object", "properties": {
+                                        "symbol": {"const": "f"},
+                                        "unit": {"const": "mm"}}}
+                                    },
+                                    {
+                                        "contains": {"type": "object", "properties": {
+                                        "symbol": {"const": "ap"},
+                                        "unit": {"const": "mm"}}}
+                                    },
+                                    {
+                                        "contains": {"type": "object", "properties": {
+                                        "symbol": {"const": "alpha"},
+                                        "unit": {"const": "deg"}}}
+                                    },
+                                    {
+                                        "contains": {"type": "object", "properties": {
+                                        "symbol": {"const": "gamma"},
+                                        "unit": {"const": "deg"}}}
+                                    },
+                                    {
+                                        "contains": {"type": "object", "properties": {
+                                        "symbol": {"const": "kappa"},
+                                        "unit": {"const": "deg"}}}
+                                    },
+                                    {
+                                        "contains": {"type": "object", "properties": {
+                                        "symbol": {"const": "lambda"},
+                                        "unit": {"const": "deg"}}}
+                                    }
+                                ]
+                            }}}
+                        ]
+                    }
+                }
+            ]
+        },
+
+        "machine": {
+            "type": "object",
+            "description": "information about the used tooling machine",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "examples": ["Boehringer"]
+                }
+            },
+            "required": ["name"],
+            "additionalProperties": true
+        },
+
+        "tool": {
+            "type": "object",
+            "description": "information about the used tools",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "description": "unique identifier for a single instance"
+                }
+            },
+            "required": ["id"],
+            "additionalProperties": true
+        },
+
+        "workpiece": {
+            "type": "object",
+            "description": "information about the workpiece, for example geometry or tempering",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "examples": ["ErmÃ¼dungsprobe"]
+                },
+                "id": {
+                    "type": "string",
+                    "description": "unique identifier for a single instance"
+                }
+            },
+            "required": ["name"],
+            "additionalProperties": true
+        },
+
+        "parameter": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "symbol": {
+                    "type": "string"
+                },
+                "valueType": {
+                    "enum": ["scalar", "vector", "string"]
+                },
+                "value": {
+                    "oneOf": [
+                        {"type": "number"},
+                        {"type": "array", "items": {"type": "number"}, "minItems": 2},
+                        {"type": "string"}
+                    ]
+                },
+                "unit": {
+                    "type": "string",
+                    "examples": ["mm/s", "um", ""]
+                }
+            },
+            "required": ["name", "symbol", "valueType", "value", "unit"]
+        },
+
+        "data": {
+            "type": "object",
+            "properties": {
+                "samplingGrids": {
+                    "type": "array",
+                    "description": "The possibly different sampling grids over which data has been sampled",
+                    "items": {
+                        "$ref": "#/$defs/samplingGrid"
+                    }
+                },
+                "dataChannels": {
+                    "type": "array",
+                    "description": "The measurement channels",
+                    "items": {
+                        "$ref": "#/$defs/dataChannel"
+                    }
+                }
+            }
+        },
+
+        "samplingGrid": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "unit": {
+                    "type": "string"
+                },
+                "storageType": {
+                    "$ref": "#/$defs/storageType"
+                },
+                "data": {
+                    "oneOf":[
+                        {"$ref": "#/$defs/internalData"},
+                        {"$ref": "#/$defs/externalFile"}
+                    ]
+                },
+                "notes": {
+                    "type": "string",
+                    "description": "notes about possible caveats or general information about this data"
+                }
+            },
+            "required": ["unit", "storageType", "data"]
+        },
+
+        "dataChannel": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "unit": {
+                    "type": "string"
+                },
+                "samplingGridIndex": {
+                    "type": "number",
+                    "description": "zero-based index of the sampling grid over which this data channel has been acquired"
+                },
+                "inProcess": {
+                    "type": "boolean",
+                    "description": "true if data is measured in-process and available for a process controller/softsensor"
+                },
+                "storageType": {
+                    "$ref": "#/$defs/storageType"
+                },
+                "data": {
+                    "oneOf":[
+                        {"$ref": "#/$defs/internalData"},
+                        {"$ref": "#/$defs/externalFile"}
+                    ]
+                },
+                "notes": {
+                    "type": "string",
+                    "description": "notes about possible caveats or general information about this data"
+                }
+            },
+            "required": ["name", "unit", "samplingGridIndex", "inProcess", "storageType", "data"]
+        },
+
+        "internalData": {
+            "type": "object",
+            "description": "Used to store small arrays of scalars or numeric tuples",
+            "properties": {
+                "length": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "oneOf": [
+                            {"type": "number"},
+                            {"type": "array", "items": {"type": "number"}, "minItems": 2}
+                        ]
+                    },
+                    "examples": [[0,1,2,3.2], [[0,1],[0.1,1],[0,0]]]
+                }
+            },
+            "required": ["length", "items"]
+        },
+
+        "externalFile": {
+            "type": "object",
+            "description": "Used to point to data stored in an external file",
+            "properties": {
+                "relativeFilePath": {
+                    "type": "string",
+                    "description": "path is relative to this JSON file"
+                },
+                "md5": {
+                    "type": "string",
+                    "description": "MD5 checksum of the external file encoded with hexadecimal digits",
+                    "minLength": 32,
+                    "maxLength": 32,
+                    "examples": ["d41d8cd98f00b204e9800998ecf8427e"]
+                },
+                "fileEncoding": {
+                    "type": "string"
+                }
+            },
+            "required": ["relativeFilePath","fileEncoding"]
+        },
+
+        "storageType": {
+            "description": "inplace: data is contained in this JSON file \nexternalFile: data is contained in an external file with relative path to this JSON file",
+            "type": "string",
+            "enum": ["inplace", "externalFile"]
+        }
+
+    }
+}
