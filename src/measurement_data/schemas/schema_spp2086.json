@@ -59,7 +59,7 @@
             "properties": {
                 "processType": {
                     "type": "string",
-                    "enum": ["Aussenlaengsdrehen","test_process"]
+                    "examples": ["Aussenlaengsdrehen","test_process"]
                 },
                 "processStartDateTime": {
                     "type": "string",
@@ -212,7 +212,7 @@
             "properties": {
                 "name": {
                     "type": "string",
-                    "examples": ["ErmÃ¼dungsprobe"]
+                    "examples": ["Ermüdungsprobe"]
                 },
                 "id": {
                     "type": "string",

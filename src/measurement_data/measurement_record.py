@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Union
 import hashlib
 import os
 import json
@@ -38,7 +38,7 @@ class MeasurementRecord:
 
 
     @classmethod
-    def from_filename(cls, filename):
+    def from_filename(cls, filename: str):
         """ Initialize instance from a file"""
 
         with open(filename, mode='rt', encoding='utf-8') as file:
@@ -65,7 +65,7 @@ class MeasurementRecord:
         return self
 
 
-    def add_sampling_grid(self, name, unit, data, **kwargs):
+    def add_sampling_grid(self, name: str, unit: str, data: List, **kwargs) -> None:
         """ add a sampling grid"""
 
         storage_type = kwargs.pop("storageType", "inplace")
@@ -88,7 +88,7 @@ class MeasurementRecord:
         return len(self.sampling_grids)-1
 
 
-    def add_data_channel(self, name, unit, sampling_grid_idx, data, **kwargs):
+    def add_data_channel(self, name: str, unit: str, sampling_grid_idx: int, data: List, **kwargs) -> None:
         """ add a data channel sampled over an existing sampling grid"""
 
         if sampling_grid_idx >= len(self.sampling_grids):
@@ -116,7 +116,30 @@ class MeasurementRecord:
         self.data_channels.append(data_channel)
 
 
-    def write(self, filepath):
+    def add_parameter(self, name: str, value: Union[str,int,float,list], unit: str, symbol="") -> None:
+        """add a process parameter to the header"""
+
+        if isinstance(value, str):
+            value_type = 'string'
+        elif isinstance(value, (int,float)):
+            value_type = 'scalar'
+        elif isinstance(value, list) and all(isinstance(n, (int,float)) for n in value):
+            value_type = 'array'
+        else:
+            raise TypeError('Parameter must be scalar, numeric vector or string')
+        
+        param_dict = {
+            "name": name,
+            "unit": unit,
+            "symbol": symbol,
+            "value": value,
+            "valueType": value_type}
+
+        self.header["process"]["parameters"].append(param_dict)
+        return
+
+
+    def write(self, filepath: str) -> None:
         """write the record to a compliant JSON file"""
         
         self.base_filepath = os.path.dirname(filepath)
@@ -143,6 +166,19 @@ class MeasurementRecord:
         with open(filepath, mode='wt', encoding='utf-8') as file:
             self.json_validator.validate(file_dict)
             json.dump(file_dict, file, ensure_ascii=False, indent=2)
+        return
+
+
+    def validate_header(self) -> None:
+        """validate the header only against the schema"""
+
+        file_dict = {
+            "$schema": self.json_validator.schema["$id"],
+            "header": self.header,
+            "data": {"samplingGrids": [], "dataChannels": []}
+            }
+        
+        self.json_validator.validate(file_dict)
         return
 
 
@@ -179,11 +215,11 @@ class MeasurementRecord:
         return external_file
 
     @staticmethod
-    def __read_inplace(data):
+    def __read_inplace(data: dict):
         return data["items"]
 
     @staticmethod
-    def __read_from_external_file(external_file, base_filename):
+    def __read_from_external_file(external_file: dict, base_filename: str):
         """read data from external file with absolute path given by filename"""
 
         md5_checksum_valid = external_file["md5"]
