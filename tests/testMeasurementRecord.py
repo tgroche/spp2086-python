@@ -56,10 +56,22 @@ class TestMeasurementRecord(unittest.TestCase):
         record.header = self.create_minimal_header()
         record.add_sampling_grid("grid", "", [1,2,3], storageType="inplace", notes="mockup")
         record.add_data_channel("mockup data", "1", 0, [0.1, 0.2, 0.1], inProcess=True, storageType="externalFile")
-        filename = os.path.join(self._tempdir.name, "test_inplace_data.json")
+        filename = os.path.join(self._tempdir.name, "test_external_file_data.json")
         record.write(filename)
 
 
+    def test_read_write_file(self):
+        record = measurement_data.MeasurementRecord()
+        record.header = self.create_minimal_header()
+        record.add_sampling_grid("grid", "", [1,2,3], storageType="inplace", notes="mockup")
+        write_data = [0.1, 0.2, 0.112]
+        record.add_data_channel("mockup data", "1", 0, write_data, inProcess=True, storageType="externalFile")
+        filename = os.path.join(self._tempdir.name, "test_read_write_data.json")
+        record.write(filename)
+
+        record_read = measurement_data.MeasurementRecord.from_filename(filename)
+        read_data = record_read.data_channels[0]["data"]
+        self.assertEqual(write_data, read_data)
 
 
     @classmethod
