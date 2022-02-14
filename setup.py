@@ -10,14 +10,14 @@ def package_files(directory):
             paths.append(os.path.join('..', path, filename))
     return paths
 
-extra_files = package_files(os.path.join('src', 'measurement_data', 'schemas'))
+extra_files = package_files(os.path.join('src', 'spp2086_measurement_data', 'schemas'))
 
 
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="spp2086",
+    name="spp2086_measurement_data",
     version="0.0.1",
     author="Tycho Groche",
     author_email="groche@mv.uni-kl.de",
@@ -29,10 +29,11 @@ setuptools.setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    package_dir={"": "src"},
+    package_dir={"spp2086_measurement_data": "src/spp2086_measurement_data"},
     packages=setuptools.find_packages(where="src"),
-    package_data={"": extra_files},
-    include_package_data=True,
+    package_data={
+        "spp2086_measurement_data": ["schemas/*.json"]
+        },
     python_requires=">=3.6",
     install_requires=[
         "jsonschema >= 4"

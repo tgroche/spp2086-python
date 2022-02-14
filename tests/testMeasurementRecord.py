@@ -1,6 +1,6 @@
 import datetime
 import unittest
-import measurement_data
+import spp2086_measurement_data
 import jsonschema
 import tempfile
 import os
@@ -8,17 +8,17 @@ import os
 class TestMeasurementRecord(unittest.TestCase):
 
     def test_create_json_validator(self):
-        json_validator = measurement_data.create_json_validator()
+        json_validator = spp2086_measurement_data.create_json_validator()
         self.assertIsInstance(json_validator, jsonschema.validators.Draft7Validator)
 
 
     def test_empty_header_not_valid(self):
-        record = measurement_data.MeasurementRecord()
+        record = spp2086_measurement_data.MeasurementRecord()
         self.assertRaises(jsonschema.ValidationError, record.validate_header)
 
 
     def test_minimal_header_is_valid(self):
-        record = measurement_data.MeasurementRecord()
+        record = spp2086_measurement_data.MeasurementRecord()
         record.header = self.create_minimal_header()
         try:
             record.validate_header()
@@ -27,7 +27,7 @@ class TestMeasurementRecord(unittest.TestCase):
 
 
     def test_minimal_header_not_valid_for_special_processes(self):
-        record = measurement_data.MeasurementRecord()
+        record = spp2086_measurement_data.MeasurementRecord()
         header = self.create_minimal_header()
         header["process"]["processType"] = "test_process" #this is a process type with special restrictions
         record.header = header
@@ -35,7 +35,7 @@ class TestMeasurementRecord(unittest.TestCase):
 
 
     def test_write_header_only(self):
-        record = measurement_data.MeasurementRecord()
+        record = spp2086_measurement_data.MeasurementRecord()
         record.header = self.create_minimal_header()
         record.add_parameter("test", 1, "")
         filename = os.path.join(self._tempdir.name, "test_header_only.json")
@@ -43,7 +43,7 @@ class TestMeasurementRecord(unittest.TestCase):
 
     
     def test_write_file_inplace_data_only(self):
-        record = measurement_data.MeasurementRecord()
+        record = spp2086_measurement_data.MeasurementRecord()
         record.header = self.create_minimal_header()
         record.add_sampling_grid("grid", "", [1,2,3], storageType="inplace", notes="mockup")
         record.add_data_channel("mockup data", "1", 0, [0.1, 0.2, 0.1], inProcess=False) #default behaviour is inplace
@@ -52,7 +52,7 @@ class TestMeasurementRecord(unittest.TestCase):
 
 
     def test_write_file_inplace_external(self):
-        record = measurement_data.MeasurementRecord()
+        record = spp2086_measurement_data.MeasurementRecord()
         record.header = self.create_minimal_header()
         record.add_sampling_grid("grid", "", [1,2,3], storageType="inplace", notes="mockup")
         record.add_data_channel("mockup data", "1", 0, [0.1, 0.2, 0.1], inProcess=True, storageType="externalFile")
@@ -61,7 +61,7 @@ class TestMeasurementRecord(unittest.TestCase):
 
 
     def test_read_write_file(self):
-        record = measurement_data.MeasurementRecord()
+        record = spp2086_measurement_data.MeasurementRecord()
         record.header = self.create_minimal_header()
         record.add_sampling_grid("grid", "", [1,2,3], storageType="inplace", notes="mockup")
         write_data = [0.1, 0.2, 0.112]
@@ -69,7 +69,7 @@ class TestMeasurementRecord(unittest.TestCase):
         filename = os.path.join(self._tempdir.name, "test_read_write_data.json")
         record.write(filename)
 
-        record_read = measurement_data.MeasurementRecord.from_filename(filename)
+        record_read = spp2086_measurement_data.MeasurementRecord.from_filename(filename)
         read_data = record_read.data_channels[0]["data"]
         self.assertEqual(write_data, read_data)
 
