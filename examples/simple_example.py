@@ -2,12 +2,12 @@ import datetime
 import math
 import os
 
-import spp2086_measurement_data #if an error is thrown here you likely did not install the package correctly
+import spp2086.measurement_data #if an error is thrown here you likely did not install the package correctly
 
 
 def simple_example():
     
-    record = spp2086_measurement_data.MeasurementRecord()
+    record = spp2086.measurement_data.MeasurementRecord()
 
     #start building the header by hand
     header_dict = create_header()
@@ -53,7 +53,7 @@ def simple_example():
     record.write(write_filepath) #before the data is written it is validated against the schema so this might throw a validation error
    
     #read the data written to the file back into memory
-    record_read = spp2086_measurement_data.MeasurementRecord.from_filename(write_filepath)
+    record_read = spp2086.measurement_data.MeasurementRecord.from_filename(write_filepath)
 
     return
 
