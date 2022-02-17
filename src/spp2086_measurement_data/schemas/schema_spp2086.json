@@ -233,7 +233,7 @@
                     "type": "string"
                 },
                 "valueType": {
-                    "enum": ["scalar", "vector", "string"]
+                    "enum": ["scalar", "array", "string"]
                 },
                 "value": {
                     "oneOf": [

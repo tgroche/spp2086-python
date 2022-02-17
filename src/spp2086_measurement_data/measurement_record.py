@@ -66,7 +66,17 @@ class MeasurementRecord:
 
 
     def add_sampling_grid(self, name: str, unit: str, data: List, **kwargs) -> None:
-        """ add a sampling grid"""
+        """ 
+        add a sampling grid to the record
+        
+        :param name: name of the sampling grid like 'Timer 1'
+        :param unit: physical unit of the data
+        :param data: the actual data as a list
+
+        :Keyword Arguments:
+            storageType (string): Either 'inplace'(default) for writing to the main file or 'externalFile' for writing to a sub file
+            notes (string): Notes about this data.
+        """
 
         storage_type = kwargs.pop("storageType", "inplace")
         notes = kwargs.pop("notes", None)
@@ -89,7 +99,20 @@ class MeasurementRecord:
 
 
     def add_data_channel(self, name: str, unit: str, sampling_grid_idx: int, data: List, **kwargs) -> None:
-        """ add a data channel sampled over an existing sampling grid"""
+        """ 
+        add a data channel sampled over an existing sampling grid
+        
+        :param name: name of the data channel like Fc
+        :param unit: physical unit of the data
+        :param sampling_grid_idx: the zero-based index of the corresponding sampling grid in self.sampling_grids
+        :param data: the actual data as a list
+
+        :Keyword Arguments:
+            storageType (string): Either 'inplace'(default) for writing to the main file or 'externalFile' for writing to a sub file
+            notes (string): Notes about this data.
+            inProcess (bool): Flag whether this data is measured in process
+        """
+
 
         if sampling_grid_idx >= len(self.sampling_grids):
             raise ValueError("The specified sampling-grid index does not exist")

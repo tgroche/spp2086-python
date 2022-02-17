@@ -17,7 +17,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="spp2086_measurement_data",
+    name="spp2086",
     version="0.0.1",
     author="Tycho Groche",
     author_email="groche@mv.uni-kl.de",
