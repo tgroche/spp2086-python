@@ -74,6 +74,20 @@ class TestMeasurementRecord(unittest.TestCase):
         self.assertEqual(write_data, read_data)
 
 
+    def test_data_channel_util(self):
+        record = spp2086.measurement_data.MeasurementRecord()
+        grid_idx = record.add_sampling_grid("grid", "m", [1,2,3])
+        record.add_data_channel("channel 1", "", grid_idx, [2,3,4])
+        record.add_data_channel("channel 2", "", grid_idx, [2,1,4])
+
+        channel_names = record.get_data_channel_names()
+        self.assertListEqual(channel_names, ["channel 1", "channel 2"])
+        channel, grid = record.get_data_channel("channel 1")
+        self.assertDictEqual(channel, record.data_channels[0])
+        self.assertDictEqual(grid, record.sampling_grids[0])
+        self.assertRaises(ValueError, record.get_data_channel, "channel 3")
+
+
     @classmethod
     def create_minimal_header(cls) -> dict:       
         tool_dict = {"id": "ID1"}

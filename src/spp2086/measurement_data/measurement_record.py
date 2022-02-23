@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import List, Union, Tuple
 import hashlib
 import os
 import json
@@ -48,17 +48,19 @@ class MeasurementRecord:
         header = file_dict["header"]
         sampling_grids = file_dict["data"]["samplingGrids"]
         data_channels = file_dict["data"]["dataChannels"]
+        base_dir = os.path.dirname(os.path.abspath(filename))
 
         #read sampling grids and data channels into memory
         for data_iter in itertools.chain(sampling_grids, data_channels):
             if data_iter["storageType"] == "inplace":
                 data_iter["data"] = cls.__read_inplace(data_iter["data"])
             elif data_iter["storageType"] == "externalFile":
-                data_iter["data"] = cls.__read_from_external_file(data_iter["data"], filename)
+                data_iter["data"] = cls.__read_from_external_file(data_iter["data"], base_dir)
             else:
                 raise ValueError()
 
         self = cls()
+        self.base_filepath = base_dir
         self.header = header
         self.sampling_grids = sampling_grids
         self.data_channels = data_channels
@@ -66,9 +68,9 @@ class MeasurementRecord:
 
 
     def add_sampling_grid(self, name: str, unit: str, data: List, **kwargs) -> None:
-        """ 
+        """
         add a sampling grid to the record
-        
+
         :param name: name of the sampling grid like 'Timer 1'
         :param unit: physical unit of the data
         :param data: the actual data as a list
@@ -99,7 +101,7 @@ class MeasurementRecord:
 
 
     def add_data_channel(self, name: str, unit: str, sampling_grid_idx: int, data: List, **kwargs) -> None:
-        """ 
+        """
         add a data channel sampled over an existing sampling grid
         
         :param name: name of the data channel like Fc
@@ -205,6 +207,24 @@ class MeasurementRecord:
         return
 
 
+    def get_data_channel(self, name:str) -> Tuple[dict, dict]:
+        """return (data_channel, sampling_grid) specified by the channel name"""
+        channel = [channel for channel in self.data_channels if channel["name"] == name]
+
+        if not channel:
+            raise ValueError(f"No channel with name: '{name}' found")
+
+        channel = channel[0]
+        sampling_grid = self.sampling_grids[channel["samplingGridIndex"]]
+        return (channel, sampling_grid)
+
+
+    def get_data_channel_names(self) -> List[str]:
+        """returns a list with all data channel names"""
+        channel_names = [channel["name"] for channel in self.data_channels]
+        return channel_names
+
+
     def __write_inplace(self, data:List):
         return {"length": len(data), "items": data}
 
@@ -242,14 +262,14 @@ class MeasurementRecord:
         return data["items"]
 
     @staticmethod
-    def __read_from_external_file(external_file: dict, base_filename: str):
-        """read data from external file with absolute path given by filename"""
+    def __read_from_external_file(external_file: dict, base_dir: str):
+        """read data from external file with absolute path given by base_dir"""
 
         md5_checksum_valid = external_file["md5"]
         file_encoding = external_file["fileEncoding"]
         relative_filepath = external_file["relativeFilePath"]
         
-        filename = os.path.join(os.path.dirname(base_filename), relative_filepath)
+        filename = os.path.join(base_dir, relative_filepath)
 
         #read back in binary mode for md5 hash
         with open(filename, mode='rb') as file:
