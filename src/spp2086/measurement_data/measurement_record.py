@@ -1,4 +1,4 @@
-from typing import List, Union, Tuple
+from typing import List, Union, Tuple, TypeVar, Type
 import hashlib
 import os
 import json
@@ -23,6 +23,7 @@ def create_json_validator():
 
     return jsonschema.Draft7Validator(spp_schema)
 
+T = TypeVar('T', bound='MeasurementRecord')
 
 class MeasurementRecord:
     """represents content of a JSON file and associated external files"""
@@ -38,7 +39,7 @@ class MeasurementRecord:
 
 
     @classmethod
-    def from_filename(cls, filename: str):
+    def from_filename(cls: Type[T], filename: str, lazy_loading=False) -> T:
         """ Initialize instance from a file"""
 
         with open(filename, mode='rt', encoding='utf-8') as file:
@@ -55,7 +56,8 @@ class MeasurementRecord:
             if data_iter["storageType"] == "inplace":
                 data_iter["data"] = cls.__read_inplace(data_iter["data"])
             elif data_iter["storageType"] == "externalFile":
-                data_iter["data"] = cls.__read_from_external_file(data_iter["data"], base_dir)
+                if not lazy_loading:
+                    data_iter["data"] = cls.__read_from_external_file(data_iter["data"], base_dir)
             else:
                 raise ValueError()
 
@@ -125,6 +127,9 @@ class MeasurementRecord:
 
         if storage_type not in ("inplace", "externalFile"):
             raise ValueError("Unsupported storage type")
+
+        if name in self.get_data_channel_names():
+            raise ValueError(f"A data channel with the name '{name}' already exists")
 
         data_channel = {
             "name": name,
@@ -214,8 +219,20 @@ class MeasurementRecord:
         if not channel:
             raise ValueError(f"No channel with name: '{name}' found")
 
+        if len(channel) > 1:
+            raise ValueError(f"Multiple data channels with name '{name}' exist.")
+
         channel = channel[0]
+        if not self.__is_data_loaded(channel):
+            channel["data"] = self.__read_from_external_file(channel["data"], self.base_filepath)
+            channel_idx = self.get_data_channel_names().index(name)
+            self.data_channels[channel_idx] = channel
+
         sampling_grid = self.sampling_grids[channel["samplingGridIndex"]]
+        if not self.__is_data_loaded(sampling_grid):
+            sampling_grid["data"] = self.__read_from_external_file(sampling_grid["data"], self.base_filepath)
+            self.sampling_grids[channel["samplingGridIndex"]] = sampling_grid
+
         return (channel, sampling_grid)
 
 
@@ -290,3 +307,10 @@ class MeasurementRecord:
                 raise RuntimeError(f"Unkown encoding {file_encoding}")
         
         return data
+
+    @staticmethod
+    def __is_data_loaded(data: dict) -> bool:
+        if data["storageType"] == "externalFile":
+            if "relativeFilePath" in data["data"]:
+                return False
+        return True

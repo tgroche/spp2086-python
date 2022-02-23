@@ -88,6 +88,25 @@ class TestMeasurementRecord(unittest.TestCase):
         self.assertRaises(ValueError, record.get_data_channel, "channel 3")
 
 
+    def test_lazy_loading(self):
+        record = spp2086.measurement_data.MeasurementRecord()
+        record.header = self.create_minimal_header()
+        record.add_sampling_grid("grid", "", [1,2,3], storageType="inplace", notes="mockup")
+        write_data = [0.1, 0.2, 0.112]
+        record.add_data_channel("mockup data", "1", 0, write_data, inProcess=True, storageType="externalFile")
+        filename = os.path.join(self._tempdir.name, "test_read_write_data.json")
+        record.write(filename)
+
+        record_read = spp2086.measurement_data.MeasurementRecord.from_filename(filename, lazy_loading=True)
+        
+        #data should not be loaded yet
+        self.assertIn("relativeFilePath", record_read.data_channels[0]["data"])
+        
+        #get data channel should load the file
+        read_channel, read_grid = record_read.get_data_channel("mockup data")
+        self.assertListEqual(write_data, read_channel["data"])
+
+
     @classmethod
     def create_minimal_header(cls) -> dict:       
         tool_dict = {"id": "ID1"}
