@@ -1,5 +1,4 @@
 import setuptools
-import os
 
 
 with open("README.md", "r", encoding="utf-8") as fh:
@@ -26,6 +25,7 @@ setuptools.setup(
         },
     python_requires=">=3.6",
     install_requires=[
-        "jsonschema >= 4"
+        "jsonschema >= 4",
+        "importlib_resources >= 5"
     ]
 )
