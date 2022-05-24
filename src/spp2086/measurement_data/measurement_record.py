@@ -69,7 +69,7 @@ class MeasurementRecord:
         return self
 
 
-    def add_sampling_grid(self, name: str, unit: str, data: List, **kwargs) -> None:
+    def add_sampling_grid(self, name: str, unit: str, data: List, **kwargs) -> int:
         """
         add a sampling grid to the record
 
@@ -314,3 +314,4 @@ class MeasurementRecord:
             if "relativeFilePath" in data["data"]:
                 return False
         return True
+        
