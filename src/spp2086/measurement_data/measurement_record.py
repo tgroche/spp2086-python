@@ -3,6 +3,7 @@ import hashlib
 import os
 import json
 import itertools
+import warnings
 
 import jsonschema
 import importlib_resources
@@ -80,10 +81,12 @@ class MeasurementRecord:
         :Keyword Arguments:
             storageType (string): Either 'inplace'(default) for writing to the main file or 'externalFile' for writing to a sub file
             notes (string): Notes about this data.
+            encoding (string): 'json' or 'bin'
         """
 
         storage_type = kwargs.pop("storageType", "inplace")
         notes = kwargs.pop("notes", None)
+        encoding = kwargs.pop("encoding", "json")
 
         if storage_type not in ("inplace", "externalFile"):
             raise ValueError("Unsupported storage type")
@@ -92,6 +95,7 @@ class MeasurementRecord:
             "name": name,
             "unit": unit,
             "storageType": storage_type,
+            "encoding": encoding,
             "data": data,
         }
 
@@ -102,19 +106,20 @@ class MeasurementRecord:
         return len(self.sampling_grids)-1
 
 
-    def add_data_channel(self, name: str, unit: str, sampling_grid_idx: int, data: List, **kwargs) -> None:
+    def add_data_channel(self, name: str, unit: str, sampling_grid_idx: int, data: Union[List, bytearray], **kwargs) -> None:
         """
         add a data channel sampled over an existing sampling grid
         
         :param name: name of the data channel like Fc
         :param unit: physical unit of the data
         :param sampling_grid_idx: the zero-based index of the corresponding sampling grid in self.sampling_grids
-        :param data: the actual data as a list
+        :param data: the actual data as a list or bytearray if encoding is set to bin
 
         :Keyword Arguments:
             storageType (string): Either 'inplace'(default) for writing to the main file or 'externalFile' for writing to a sub file
             notes (string): Notes about this data.
             inProcess (bool): Flag whether this data is measured in process
+            encoding (string): 'json' or 'bin'
         """
 
 
@@ -124,6 +129,7 @@ class MeasurementRecord:
         in_process = kwargs.pop("inProcess", True)
         storage_type = kwargs.pop("storageType", "inplace")
         notes = kwargs.pop("notes", None)
+        encoding = kwargs.pop("encoding", "json")
 
         if storage_type not in ("inplace", "externalFile"):
             raise ValueError("Unsupported storage type")
@@ -131,11 +137,16 @@ class MeasurementRecord:
         if name in self.get_data_channel_names():
             raise ValueError(f"A data channel with the name '{name}' already exists")
 
+        if bool(kwargs):
+            warnings.warn(f"Unknown arguments {kwargs.keys()} passed to add_data_channel")
+
+
         data_channel = {
             "name": name,
             "unit": unit,
             "samplingGridIndex": sampling_grid_idx,
             "storageType": storage_type,
+            "encoding": encoding,
             "inProcess": in_process,
             "data": data
         }
@@ -183,7 +194,7 @@ class MeasurementRecord:
             if data_iter["storageType"] == "inplace":
                 data_iter["data"] = self.__write_inplace(data_iter["data"])
             elif data_iter["storageType"] == "externalFile":
-                data_iter["data"] = self.__write_to_external_file(data_iter["data"], data_iter["name"])
+                data_iter["data"] = self.__write_to_external_file(data_iter["data"], data_iter["name"], data_iter.pop("encoding", "json"))
             else:
                 raise ValueError()
 
@@ -246,18 +257,26 @@ class MeasurementRecord:
         return {"length": len(data), "items": data}
 
 
-    def __write_to_external_file(self, data:List, filename:str):
+    def __write_to_external_file(self, data:List, filename:str, encoding:str):
         """write channel or grid data to an external file"""
 
         ext_filepath = os.path.join(self.base_filepath, self.rel_ext_filepath, filename + '.json')
         ext_file_dir =  os.path.join(self.base_filepath, self.rel_ext_filepath)
-
+        
         if not os.path.exists(ext_file_dir):
             os.makedirs(ext_file_dir)
 
-        #write as json to file
-        with open(ext_filepath, mode='wt', encoding='utf-8') as file:
-            json.dump(data, file, ensure_ascii=False, separators=(',', ':'))
+
+        if encoding == "json":
+            with open(ext_filepath, mode='wt', encoding='utf-8') as file:
+                #write as json to file
+                json.dump(data, file, ensure_ascii=False, separators=(',', ':'))
+        elif encoding == "bin":
+            with open(ext_filepath, mode='wb',) as file:
+                #write binary bytes directly to file
+                file.write(data)
+        else:
+            raise ValueError(f"Encoding: '{encoding}' not supported found")
         
         #read back in binary mode for md5 hash
         with open(ext_filepath, mode='rb') as file:
@@ -270,7 +289,7 @@ class MeasurementRecord:
         external_file = {
             "relativeFilePath": os.path.join(self.rel_ext_filepath, filename + '.json'),
             "md5": md5_checksum,
-            "fileEncoding": "json"
+            "fileEncoding": encoding
         }
         return external_file
 
@@ -299,12 +318,14 @@ class MeasurementRecord:
         if md5_checksum_actual != md5_checksum_valid:
             raise RuntimeError(f"calculated md5 checksum of {filename} is different from the specified one")
 
-
-        with open(filename, mode='rt', encoding='utf-8') as file:
-            if file_encoding == "json":
+        if file_encoding == "json":
+            with open(filename, mode='rt', encoding='utf-8') as file:
                 data = json.load(file)
-            else:
-                raise RuntimeError(f"Unkown encoding {file_encoding}")
+        elif file_encoding == "bin":
+            with open(filename, mode='rb') as file:
+                data = file.read()
+        else:
+            raise RuntimeError(f"Unkown encoding {file_encoding}")
         
         return data
 

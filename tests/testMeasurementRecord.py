@@ -1,3 +1,4 @@
+from ast import Import
 import datetime
 import unittest
 import spp2086.measurement_data
@@ -72,6 +73,29 @@ class TestMeasurementRecord(unittest.TestCase):
         record_read = spp2086.measurement_data.MeasurementRecord.from_filename(filename)
         read_data = record_read.data_channels[0]["data"]
         self.assertEqual(write_data, read_data)
+
+
+    def test_read_write_binary_file(self):
+        
+        #only run if numpy is installed
+        try:
+            import numpy as np
+        except ImportError as err:
+            self.skipTest("Skipping since numpy is not installed")
+        
+        record = spp2086.measurement_data.MeasurementRecord()
+        record.header = self.create_minimal_header()
+        record.add_sampling_grid("grid", "", [1,2,3], storageType="inplace", notes="mockup")
+        write_data = np.asarray([0.1, 0.2, 0.112], dtype=np.float64)
+        write_data_bin = write_data.tobytes()   #convert numpy array to bytearray for binary storage
+        record.add_data_channel("mockup data", "1", 0, write_data_bin, inProcess=True, storageType="externalFile", encoding="bin")
+        filename = os.path.join(self._tempdir.name, "test_read_write_data.json")
+        record.write(filename)
+
+        record_read = spp2086.measurement_data.MeasurementRecord.from_filename(filename)
+        read_data_bin = record_read.data_channels[0]["data"]
+        read_data = np.frombuffer(read_data_bin, dtype=np.float64)
+        self.assertTrue(np.array_equal(write_data, read_data))
 
 
     def test_data_channel_util(self):
